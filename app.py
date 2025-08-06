@@ -29,4 +29,5 @@ input_df = pd.DataFrame([input_data])
 # Predict when button is pressed
 if st.button("Predict"):
     prediction = model.predict(input_df)
-    st.success(f"📊 Predicted Jobs Created : *{prediction[0]:.2f}%*")
+
+    st.success(f"📊 Predicted Jobs Created : *{prediction[0]:.2f}*")
