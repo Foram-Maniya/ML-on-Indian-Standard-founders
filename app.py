@@ -111,5 +111,6 @@ def run():
 
 # --- Entry Point ---
 # This ensures the run() function is called when the script is executed
-if _name_ == "_main_":
+if __name__ == "__main__":
+
     run()
