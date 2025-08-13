@@ -11,21 +11,20 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# --- Model Loading ---
-# This function loads the trained model.
-# It's wrapped in st.cache_data to prevent reloading on every interaction.
+# --- Asset Loading ---
+# Using st.cache_data to prevent reloading assets on every interaction.
 @st.cache_data
-def load_model(path):
-    """Loads a machine learning model from a .pkl file."""
+def load_asset(path):
+    """Loads a joblib file from the specified path."""
     try:
         with open(path, 'rb') as file:
-            model = joblib.load(file)
-        return model
+            asset = joblib.load(file)
+        return asset
     except FileNotFoundError:
-        st.error(f"Model file not found at '{path}'. Please ensure the model file is in the same directory as app.py.")
+        st.error(f"Asset file not found at '{path}'. Please ensure the file is in the same directory as app.py.")
         return None
     except Exception as e:
-        st.error(f"An error occurred while loading the model: {e}")
+        st.error(f"An error occurred while loading asset from '{path}': {e}")
         return None
 
 # --- Main Application ---
@@ -36,18 +35,17 @@ def run():
     st.title("Startup Job Creation Predictor 🚀")
     st.markdown("Enter the startup's details below to predict the number of jobs it is likely to create. This tool uses a machine learning model trained on data from Indian startups.")
 
-    # --- Load Model ---
-    # Make sure your trained model is saved as 'model.pkl' in the same folder
-    model = load_model('model.pkl')
+    # --- Load Model and Scaler ---
+    # Make sure 'model.pkl' and 'scaler.pkl' are in the same folder
+    model = load_asset('model.pkl')
+    scaler = load_asset('scaler.pkl')
 
-    # Proceed only if the model was loaded successfully
-    if model:
+    # Proceed only if both the model and scaler were loaded successfully
+    if model and scaler:
         # --- User Input Section ---
         st.sidebar.header("Input Features")
         st.sidebar.markdown("Adjust the sliders and inputs to match the startup's profile.")
 
-        # Create input fields in the sidebar for the features your model needs
-        # The default values are set to be reasonable starting points.
         age = st.sidebar.slider(
             "Founder's Age",
             min_value=18, max_value=80, value=30,
@@ -79,10 +77,8 @@ def run():
         )
 
         # --- Prediction Logic ---
-        # Create a button in the main area to trigger the prediction
         if st.button("Predict Jobs Created", type="primary"):
-            # Create a dictionary of the user's inputs
-            # The keys MUST exactly match the feature names your model was trained on
+            # The keys MUST exactly match the feature names the model was trained on, in the correct order.
             features = {
                 'age': age,
                 'prior_work_experience': prior_work_experience,
@@ -90,16 +86,17 @@ def run():
                 'investor_count': investor_count,
                 'founding_year': founding_year
             }
-
-            # Convert the dictionary to a pandas DataFrame
             features_df = pd.DataFrame([features])
 
-            # Make a prediction using the loaded model
+            # --- THE CRITICAL STEP ---
+            # Scale the user's input features using the loaded scaler
             try:
-                prediction = model.predict(features_df)
+                scaled_features = scaler.transform(features_df)
+                
+                # Make a prediction using the model on the SCALED features
+                prediction = model.predict(scaled_features)
                 
                 # The model might return a float, so we round it to the nearest whole number
-                # as you can't have a fraction of a job.
                 predicted_jobs = int(np.round(prediction[0]))
 
                 # --- Display Result ---
@@ -110,7 +107,5 @@ def run():
                 st.error(f"An error occurred during prediction: {e}")
 
 # --- Entry Point ---
-# This ensures the run() function is called when the script is executed
 if __name__ == "__main__":
-
     run()
